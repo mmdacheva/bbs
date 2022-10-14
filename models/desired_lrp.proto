@@ -147,3 +147,13 @@ message DesiredLRP {
   repeated Sidecar sidecars = 36;
   LogRateLimit log_rate_limit = 37;
 }
+
+message MiniDesiredLRP {
+  string process_guid = 1 [(gogoproto.jsontag) = "process_guid"];
+  string domain = 2 [(gogoproto.jsontag) = "domain"];
+  int32 instances = 4 [(gogoproto.jsontag) = "instances"];
+  ProtoRoutes routes = 5 [(gogoproto.nullable) = true, (gogoproto.customtype) = "Routes"];
+  string log_guid = 6 [(gogoproto.jsontag) = "log_guid"];
+  ModificationTag modification_tag = 7;
+  map<string, MetricTagValue> metric_tags = 8;
+}

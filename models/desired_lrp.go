@@ -20,6 +20,11 @@ type DesiredLRPChange struct {
 	After  *DesiredLRP
 }
 
+type MiniDesiredLRPChange struct {
+	Before *MiniDesiredLRP
+	After  *MiniDesiredLRP
+}
+
 type DesiredLRPFilter struct {
 	Domain       string
 	ProcessGuids []string
@@ -240,7 +245,7 @@ func (d *DesiredLRP) DesiredLRPSchedulingInfo() DesiredLRPSchedulingInfo {
 	)
 }
 
-func (d *DesiredLRPMini) DesiredLRPMini() DesiredLRPMini {
+func (d *MiniDesiredLRP) MiniDesiredLRP() MiniDesiredLRP {
 	var routes Routes
 	if d.Routes != nil {
 		routes = *d.Routes
@@ -250,13 +255,13 @@ func (d *DesiredLRPMini) DesiredLRPMini() DesiredLRPMini {
 		modificationTag = *d.ModificationTag
 	}
 
-	return NewDesiredLRPMini(
+	return NewMiniDesiredLRP(
 		d.ProcessGuid,
 		d.Domain,
 		d.Instances,
-		d.Routes,
+		routes,
 		d.LogGuid,
-		d.ModificationTag,
+		modificationTag,
 	)
 }
 
@@ -520,21 +525,21 @@ func NewDesiredLRPSchedulingInfo(
 	}
 }
 
-func NewDesiredLRPMini(
+func NewMiniDesiredLRP(
 	processGuid string,
 	domain string,
 	instances int32,
 	routes Routes,
 	logGuid string,
 	modTag ModificationTag,
-) DesiredLRPMini {
-	return DesiredLRPMini{
-		ProcessGuid: 	    processGuid,
-		Domain:      	    domain,
-		Instances:          instances,
-		Routes:             routes,
-		LogGuid:     	    logGuid,
-		ModificationTag:    modTag,
+) MiniDesiredLRP {
+	return MiniDesiredLRP{
+		ProcessGuid:     processGuid,
+		Domain:          domain,
+		Instances:       instances,
+		Routes:          &routes,
+		LogGuid:         logGuid,
+		ModificationTag: &modTag,
 	}
 }
 

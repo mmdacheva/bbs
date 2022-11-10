@@ -122,6 +122,26 @@ func (*DesiredLRP) Version() format.Version {
 	return format.V3
 }
 
+func (*MiniDesiredLRP) Version() format.Version {
+	return format.V3
+}
+
+func (d *MiniDesiredLRP) actionsFromCachedDependenciesv2() []ActionInterface {
+	actions := make([]ActionInterface, len(d.CachedDependencies))
+	for i := range d.CachedDependencies {
+		cacheDependency := d.CachedDependencies[i]
+		actions[i] = &DownloadAction{
+			Artifact:  cacheDependency.Name,
+			From:      cacheDependency.From,
+			To:        cacheDependency.To,
+			CacheKey:  cacheDependency.CacheKey,
+			LogSource: cacheDependency.LogSource,
+			User:      d.LegacyDownloadUser,
+		}
+	}
+	return actions
+}
+
 func (d *DesiredLRP) actionsFromCachedDependencies() []ActionInterface {
 	actions := make([]ActionInterface, len(d.CachedDependencies))
 	for i := range d.CachedDependencies {
@@ -143,6 +163,23 @@ func newDesiredLRPWithCachedDependenciesAsSetupActions(d *DesiredLRP) *DesiredLR
 	if len(d.CachedDependencies) > 0 {
 
 		cachedDownloads := Parallel(d.actionsFromCachedDependencies()...)
+
+		if d.Setup != nil {
+			d.Setup = WrapAction(Serial(cachedDownloads, UnwrapAction(d.Setup)))
+		} else {
+			d.Setup = WrapAction(Serial(cachedDownloads))
+		}
+		d.CachedDependencies = nil
+	}
+
+	return d
+}
+
+func newMiniDesiredLRPWithCachedDependenciesAsSetupActions(d *MiniDesiredLRP) *MiniDesiredLRP {
+	d = d.Copy()
+	if len(d.CachedDependencies) > 0 {
+
+		cachedDownloads := Parallel(d.actionsFromCachedDependenciesv2()...)
 
 		if d.Setup != nil {
 			d.Setup = WrapAction(Serial(cachedDownloads, UnwrapAction(d.Setup)))
@@ -177,10 +214,38 @@ func downgradeDesiredLRPV3ToV2(d *DesiredLRP) *DesiredLRP {
 	return d
 }
 
+func downgradeMiniDesiredLRPV2ToV1(d *MiniDesiredLRP) *MiniDesiredLRP {
+	return d
+}
+
+func downgradeMiniDesiredLRPV1ToV0(d *MiniDesiredLRP) *MiniDesiredLRP {
+	d.Action = d.Action.SetDeprecatedTimeoutNs()
+	d.Setup = d.Setup.SetDeprecatedTimeoutNs()
+	d.Monitor = d.Monitor.SetDeprecatedTimeoutNs()
+	d.DeprecatedStartTimeoutS = uint32(d.StartTimeoutMs) / 1000
+	return newMiniDesiredLRPWithCachedDependenciesAsSetupActions(d)
+}
+
+func downgradeMiniDesiredLRPV3ToV2(d *MiniDesiredLRP) *MiniDesiredLRP {
+	layers := ImageLayers(d.ImageLayers)
+
+	d.CachedDependencies = append(layers.ToCachedDependencies(), d.CachedDependencies...)
+	d.Setup = layers.ToDownloadActions(d.LegacyDownloadUser, d.Setup)
+	d.ImageLayers = nil
+
+	return d
+}
+
 var downgrades = []func(*DesiredLRP) *DesiredLRP{
 	downgradeDesiredLRPV1ToV0,
 	downgradeDesiredLRPV2ToV1,
 	downgradeDesiredLRPV3ToV2,
+}
+
+var downgradesv2 = []func(*MiniDesiredLRP) *MiniDesiredLRP{
+	downgradeMiniDesiredLRPV1ToV0,
+	downgradeMiniDesiredLRPV2ToV1,
+	downgradeMiniDesiredLRPV3ToV2,
 }
 
 func (d *DesiredLRP) VersionDownTo(v format.Version) *DesiredLRP {
@@ -188,6 +253,16 @@ func (d *DesiredLRP) VersionDownTo(v format.Version) *DesiredLRP {
 
 	for version := d.Version(); version > v; version-- {
 		versionedLRP = downgrades[version-1](versionedLRP)
+	}
+
+	return versionedLRP
+}
+
+func (d *MiniDesiredLRP) VersionDownTov2(v format.Version) *MiniDesiredLRP {
+	versionedLRP := d.Copy()
+
+	for version := d.Version(); version > v; version-- {
+		versionedLRP = downgradesv2[version-1](versionedLRP)
 	}
 
 	return versionedLRP
@@ -309,6 +384,11 @@ func (d *DesiredLRP) DesiredLRPRunInfo(createdAt time.Time) DesiredLRPRunInfo {
 func (d *DesiredLRP) Copy() *DesiredLRP {
 	newDesired := *d
 	return &newDesired
+}
+
+func (d *MiniDesiredLRP) Copy() *MiniDesiredLRP {
+	newMiniDesired := *d
+	return &newMiniDesired
 }
 
 func (d *DesiredLRP) CreateComponents(createdAt time.Time) (DesiredLRPSchedulingInfo, DesiredLRPRunInfo) {

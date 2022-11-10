@@ -156,4 +156,12 @@ message MiniDesiredLRP {
   string log_guid = 6 [(gogoproto.jsontag) = "log_guid"];
   ModificationTag modification_tag = 7;
   map<string, MetricTagValue> metric_tags = 8;
+  Action setup = 9;
+  Action action = 10;
+  Action monitor = 11;
+  uint32 deprecated_start_timeout_s = 12 [(gogoproto.jsontag) = "start_timeout,omitempty", deprecated=true];
+  int64 start_timeout_ms = 13 [(gogoproto.jsontag) = "start_timeout_ms"];
+  repeated CachedDependency cached_dependencies = 14;
+  repeated ImageLayer image_layers = 15;
+  string legacy_download_user = 16 [deprecated=true];
 }

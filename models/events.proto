@@ -63,6 +63,19 @@ message DesiredLRPRemovedEvent {
   DesiredLRP desired_lrp = 1;
 }
 
+message MiniDesiredLRPCreatedEvent {
+  MiniDesiredLRP minidesired_lrp = 1;
+}
+
+message MiniDesiredLRPChangedEvent {
+  MiniDesiredLRP before = 1;
+  MiniDesiredLRP after = 2;
+}
+
+message MiniDesiredLRPRemovedEvent {
+  MiniDesiredLRP minidesired_lrp = 1;
+}
+
 message ActualLRPCrashedEvent {
   ActualLRPKey actual_lrp_key = 1 [(gogoproto.nullable) = false, (gogoproto.jsontag) = "", (gogoproto.embed) = true];
   ActualLRPInstanceKey actual_lrp_instance_key = 2 [(gogoproto.nullable) = false, (gogoproto.jsontag) = "", (gogoproto.embed) = true];

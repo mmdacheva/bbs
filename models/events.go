@@ -50,6 +50,22 @@ func VersionDesiredLRPsTo(event Event, target format.Version) Event {
 	}
 }
 
+func VersionMiniDesiredLRPsTo(event Event, target format.Version) Event {
+	switch event := event.(type) {
+	case *MiniDesiredLRPCreatedEvent:
+		return NewMiniDesiredLRPCreatedEvent(event.MinidesiredLrp.VersionDownTov2(target))
+	case *MiniDesiredLRPRemovedEvent:
+		return NewMiniDesiredLRPRemovedEvent(event.MinidesiredLrp.VersionDownTov2(target))
+	case *MiniDesiredLRPChangedEvent:
+		return NewMiniDesiredLRPChangedEvent(
+			event.Before.VersionDownTov2(target),
+			event.After.VersionDownTov2(target),
+		)
+	default:
+		return event
+	}
+}
+
 // Downgrade the TaskEvent payload (i.e. Task(s)) to the given target version
 func VersionTaskDefinitionsTo(event Event, target format.Version) Event {
 	switch event := event.(type) {
@@ -78,6 +94,20 @@ func (event *DesiredLRPCreatedEvent) Key() string {
 	return event.DesiredLrp.GetProcessGuid()
 }
 
+func NewMiniDesiredLRPCreatedEvent(minidesiredLRP *MiniDesiredLRP) *MiniDesiredLRPCreatedEvent {
+	return &MiniDesiredLRPCreatedEvent{
+		MinidesiredLrp: minidesiredLRP,
+	}
+}
+
+func (event *MiniDesiredLRPCreatedEvent) EventType() string {
+	return EventTypeDesiredLRPCreated
+}
+
+func (event *MiniDesiredLRPCreatedEvent) Key() string {
+	return event.MinidesiredLrp.GetProcessGuid()
+}
+
 func NewDesiredLRPChangedEvent(before, after *DesiredLRP) *DesiredLRPChangedEvent {
 	return &DesiredLRPChangedEvent{
 		Before: before,
@@ -91,6 +121,35 @@ func (event *DesiredLRPChangedEvent) EventType() string {
 
 func (event *DesiredLRPChangedEvent) Key() string {
 	return event.Before.GetProcessGuid()
+}
+
+func NewMiniDesiredLRPChangedEvent(before, after *MiniDesiredLRP) *MiniDesiredLRPChangedEvent {
+	return &MiniDesiredLRPChangedEvent{
+		Before: before,
+		After:  after,
+	}
+}
+
+func (event *MiniDesiredLRPChangedEvent) EventType() string {
+	return EventTypeDesiredLRPChanged
+}
+
+func (event *MiniDesiredLRPChangedEvent) Key() string {
+	return event.Before.GetProcessGuid()
+}
+
+func NewMiniDesiredLRPRemovedEvent(minidesiredLRP *MiniDesiredLRP) *MiniDesiredLRPRemovedEvent {
+	return &MiniDesiredLRPRemovedEvent{
+		MinidesiredLrp: minidesiredLRP,
+	}
+}
+
+func (event *MiniDesiredLRPRemovedEvent) EventType() string {
+	return EventTypeDesiredLRPRemoved
+}
+
+func (event MiniDesiredLRPRemovedEvent) Key() string {
+	return event.MinidesiredLrp.GetProcessGuid()
 }
 
 func NewDesiredLRPRemovedEvent(desiredLRP *DesiredLRP) *DesiredLRPRemovedEvent {
